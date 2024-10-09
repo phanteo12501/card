@@ -32,6 +32,7 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
+            overflow-x: hidden;
         }
         .card {
             background: rgba(255, 255, 255, 0.1);
@@ -42,6 +43,8 @@
             max-width: 400px;
             text-align: center;
             animation: float 6s ease-in-out infinite, glowing 3s infinite;
+            position: relative;
+            z-index: 1;
         }
         .header {
             font-size: 24px;
@@ -74,18 +77,27 @@
             display: inline-block;
             margin: 10px 0;
         }
-        .flowers {
-            position: absolute;
-            width: 100%;
-            height: 100%;
+        .firework-btn {
+            background: linear-gradient(45deg, #ff69b4, #ff1493);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            padding: 12px 25px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 5px 15px rgba(255, 105, 180, 0.4);
+        }
+        .firework-btn:active {
+            transform: scale(0.95);
+        }
+        #fireworksCanvas {
+            position: fixed;
             top: 0;
             left: 0;
             pointer-events: none;
-        }
-        .flower {
-            position: absolute;
-            font-size: 20px;
-            animation: float 4s ease-in-out infinite;
+            z-index: 0;
         }
         @media (max-width: 320px) {
             .header {
@@ -97,27 +109,137 @@
             .heart {
                 font-size: 30px;
             }
+            .firework-btn {
+                font-size: 16px;
+                padding: 10px 20px;
+            }
         }
     </style>
 </head>
 <body>
+    <canvas id="fireworksCanvas"></canvas>
     <div class="card">
         <div class="header">✨ Chúc Mừng Sinh Nhật Mẹ! ✨</div>
         <img src="https://banhkemsaigon.vn/files/sanpham/381/1/jpg/m30-banh-sinh-nhat-me.jpg" alt="Bánh sinh nhật cho Mẹ" class="cake-image">
         <div class="heart">❤️</div>
         <div class="message">
-            Mẹ yêu quý của con!<br><br>
-            Chúc Mẹ một năm mới tràn đầy<br>
-            Hạnh phúc và Niềm vui.<br>
-            Sức khỏe dồi dào và Bình an.<br><br>
+            Con Chúc Mẹ <br>
+            Ngày càng hạnh phúc và tràn đầy niềm vui.<br>
+            Sức khỏe dồi dào và luôn bình an.<br><br>
             Con yêu Mẹ rất nhiều! 
         </div>
-        <div class="flowers">
-            <div class="flower" style="top: 5%; left: 5%">🌸</div>
-            <div class="flower" style="top: 10%; right: 5%">🌺</div>
-            <div class="flower" style="bottom: 10%; left: 5%">🌷</div>
-            <div class="flower" style="bottom: 5%; right: 5%">🌹</div>
-        </div>
+        <button class="firework-btn">🎆 Bắn pháo hoa 🎆</button>
     </div>
+
+    <script>
+        const canvas = document.getElementById('fireworksCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        class Firework {
+            constructor(x, y, targetX, targetY) {
+                this.x = x;
+                this.y = y;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.distance = Math.sqrt(Math.pow(targetX - x, 2) + Math.pow(targetY - y, 2));
+                this.angle = Math.atan2(targetY - y, targetX - x);
+                this.speed = 2;
+                this.particles = [];
+                this.alive = true;
+            }
+
+            update() {
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+
+                if (Math.abs(this.x - this.targetX) < 5 && Math.abs(this.y - this.targetY) < 5) {
+                    this.explode();
+                    this.alive = false;
+                }
+            }
+
+            explode() {
+                for (let i = 0; i < 50; i++) {
+                    const angle = (Math.PI * 2 / 50) * i;
+                    const speed = Math.random() * 3 + 1;
+                    const color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                    this.particles.push(new Particle(this.x, this.y, angle, speed, color));
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+
+                this.particles.forEach(particle => {
+                    particle.update();
+                    particle.draw();
+                });
+
+                this.particles = this.particles.filter(particle => particle.alive);
+            }
+        }
+
+        class Particle {
+            constructor(x, y, angle, speed, color) {
+                this.x = x;
+                this.y = y;
+                this.angle = angle;
+                this.speed = speed;
+                this.color = color;
+                this.alive = true;
+                this.alpha = 1;
+            }
+
+            update() {
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+                this.alpha -= 0.02;
+                if (this.alpha <= 0) this.alive = false;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 1, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${this.color}, ${this.alpha})`;
+                ctx.fill();
+            }
+        }
+
+        let fireworks = [];
+        
+        function animate() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            fireworks.forEach(firework => {
+                firework.update();
+                firework.draw();
+            });
+
+            fireworks = fireworks.filter(firework => 
+                firework.alive || firework.particles.length > 0);
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        document.querySelector('.firework-btn').addEventListener('click', () => {
+            const targetX = Math.random() * canvas.width;
+            const targetY = Math.random() * (canvas.height * 0.6);
+            fireworks.push(new Firework(canvas.width / 2, canvas.height, targetX, targetY));
+        });
+    </script>
 </body>
 </html>
